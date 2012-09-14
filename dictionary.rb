@@ -18,14 +18,67 @@ module BinarySearch
   end
 end
 
+module TreeTraversal
+private
+  def search(tree, target)
+    if target.size == 1 #last char
+      if tree[target] == nil #this path dont have this char
+        return false
+      elsif tree[target][:end] == :end #yay, we reach then end of the path too
+        return true
+      else #nope, this path contain words longer than target
+        return false
+      end
+    else #still have char
+      first_char = target[0]
+      subtarget = target[1..-1] #the rest of the target word
+      subtree = tree[first_char]
+      if subtree == nil #dead end
+        return false
+      else
+        return search(subtree,subtarget)
+      end
+    end
+  end
+
+  #Parse the wordlist, build a tree of words
+  def build_tree(filename)
+    tree = Hash.new
+    File.open(filename, 'r') do |file|
+      file.each_line do |line|
+        word = line.strip.downcase #remove LF,CR
+        add(word, tree)
+      end
+    end
+    return tree
+  end
+  
+  #store a word 'here' as : {h=>{e=>{r=>{:end=>:end, e=>{:end=>:end}}}}}
+  def add(word, tree)
+    if word != ''
+      first_char = word[0]
+      subword = word[1..-1] #the rest of the word
+      subtree = tree[first_char]
+      if subtree == nil #first time encounter this char in this path
+        tree[first_char] = subtree = {}
+      end
+      tree[first_char] = add(subword, subtree)
+      return tree
+    else
+      return {:end=>:end}
+    end
+  end
+end
+
 #Dictionary binds to a wordlist.txt and provide methods to check if word is valid, as well as other fun filter 
 class Dictionary
-  include BinarySearch #ready to swap in a different search algorithm if needed
-  
+#  include BinarySearch #ready to swap in a different search algorithm if needed
+  include TreeTraversal
   WORDLIST = './wordlist.txt'
   
   def initialize
-    @file = File.readlines(WORDLIST)#I am trading space for time: read all in memory for fast processing
+#    @file = File.readlines(WORDLIST)#I am trading space for time: read all in memory for fast processing
+    @file = build_tree(WORDLIST)
   end
 
   #expect word in downcase for correctness. Return true or false
@@ -37,13 +90,15 @@ class Dictionary
   def words_contain_2_words
     start_time = Time.now
 
-    @file.each do |line|
-      line = line.strip #line have CR/LF
-      if line.size == 6
-        words = extract_words(line) #an array or words, each broken down into 2 words
-        unless words.empty?
-          words.each do |word_set| #each word_set is an array of 2 words
-            puts word_set.join('; ')  
+    File.open(WORDLIST, 'r') do |file|
+      file.each_line do |line|
+        line = line.strip #line have CR/LF
+        if line.size == 6
+          words = extract_words(line) #an array or words, each broken down into 2 words
+          unless words.empty?
+            words.each do |word_set| #each word_set is an array of 2 words
+              puts word_set.join('; ')  
+            end
           end
         end
       end
